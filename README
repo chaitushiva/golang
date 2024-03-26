@@ -1,0 +1,8 @@
+Why Go compiles faster:
+
+All imports are explicitly listed at the beginning of each source file, so the compiler does not have to read and process an entire file to determine its dependencies.
+The dependencies of a package form a directed acyclic graph, and because there are no cycles, packages can be compiled separately and perhaps in parallel.
+Changes only trigger recompilation of affected files and their dependencies.
+Go intentionally avoids complex language features like inheritance, and operator overloading. This reduces parsing complexity.
+Go's compiler leverages multiple cores for parallel compilation of independent files, maximizing CPU utilization.
+Unused import in Golang is an error and will only import the packages needed. It makes sure the compilation time is not increased due to unused packages.
