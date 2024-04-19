@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	// Include gRPC libraries (replace with actual import paths yes)
+	// Include gRPC libraries (replace with actual import paths)
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
