@@ -1,0 +1,33 @@
+With IRSA (IAM Roles for Service Accounts) via OIDC, the session tagging process was handled implicitly, while with EKS Pod Identity, AWS requires explicit session tagging via sts:TagSession.
+
+Here’s a breakdown of how IRSA and Pod Identity differ in role assumption:
+
+How IRSA (OIDC) Handled This
+IAM Role Assumption via OIDC:
+IRSA used a federated trust relationship with the EKS OIDC provider.
+The IAM role trust policy allowed the OIDC provider (sts.amazonaws.com) to issue credentials based on the service account annotation.
+OIDC Provided Tags Automatically:
+AWS automatically injected the kubernetes.io/serviceaccount and kubernetes.io/cluster tags when the pod assumed the IAM role.
+The role trust policy validated these tags without requiring an explicit sts:TagSession.
+Result:
+The IAM role assumption happened smoothly because the session was tagged implicitly without needing sts:TagSession.
+How EKS Pod Identity Works Differently
+IAM Role Assumption via Pod Identity Agent:
+With EKS Pod Identity, the role assumption happens through the Pod Identity agent instead of OIDC.
+This agent calls sts:AssumeRole but now requires sts:TagSession explicitly.
+Explicit Tagging Required:
+AWS now mandates that the session be tagged with kubernetes.io/serviceaccount and kubernetes.io/cluster.
+The IAM role in Account B must allow sts:TagSession to let the role be assumed successfully.
+Result:
+If sts:TagSession is missing, the role assumption fails with a permission error.
+Why Did AWS Change This?
+EKS Pod Identity is fully managed and more scalable than IRSA.
+Pod Identity uses session tags explicitly, requiring permissions that IRSA handled implicitly.
+AWS enforces stricter role assumptions to ensure security by requiring explicit permission for tagging sessions.
+Key Takeaways
+Feature	IRSA (OIDC)	EKS Pod Identity
+Role Assumption	Via OIDC provider	Via Pod Identity Agent
+Session Tagging	Implicitly added	Explicitly requires sts:TagSession
+Trust Policy	Allowed sts:AssumeRoleWithWebIdentity	Requires sts:AssumeRole with tag conditions
+Permission Requirement	No need for sts:TagSession	Needs sts:TagSession
+Since EKS Pod Identity now enforces explicit session tagging, updating the IAM role trust policy and permissions is necessary to allow ExternalDNS to assume the role successfully.
