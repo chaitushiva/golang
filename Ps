@@ -1,3 +1,17 @@
+*** Keywords ***
+All Pods In Namespace Are Running Or Succeeded
+    [Arguments]    ${namespace}
+    ${pods}=    Run Process    kubectl get pods -n ${namespace} --no-headers -o custom-columns=":status.phase"
+    Log    ${pods.stdout}
+
+    ${pod_statuses}=    Split String    ${pods.stdout}    \n
+    FOR    ${status}    IN    @{pod_statuses}
+        Should Contain Any    ${status}    Running    Succeeded
+        ...    msg=Found pod in ${namespace} with unexpected status: ${status}
+    END
+
+
+
 *** Settings ***
 Library    KubeLibrary
 
