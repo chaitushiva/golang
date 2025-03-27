@@ -31,3 +31,22 @@ Get Pod Status
     [Documentation]    Returns the status of a given pod
     ${status}    Get Pod Status    ${pod}    ${namespace}
     RETURN    ${status}
+
+
+*** Settings ***
+Library    KubeLibrary
+
+*** Test Cases ***
+Check All Pods Running
+    [Documentation]    Verify all pods in all namespaces are in Running state
+    ${pods}    List Pods    all-namespaces=True
+    ${failures}    Set Variable    0
+    
+    FOR    ${pod}    IN    @{pods}
+        ${status}    Get From Dictionary    ${pod}    status.phase
+        Run Keyword If    '${status}' != 'Running'    Set Variable    ${failures}    ${failures + 1}
+    END
+
+    Should Be Equal As Integers    ${failures}    0    All pods should be in Running state
+
+
