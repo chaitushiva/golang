@@ -1,3 +1,28 @@
+*** Settings ***
+Library    KubeLibrary
+
+*** Test Cases ***
+Verify All Pods In All Namespaces Are Running Or Succeeded
+    ${namespaces}=    Get Resources    kind=Namespace
+    FOR    ${namespace}    IN    @{namespaces}
+        ${namespace_name}=    Set Variable    ${namespace["metadata"]["name"]}
+        Log    Checking namespace: ${namespace_name}
+        All Pods In Namespace Are Running Or Succeeded    ${namespace_name}
+    END
+
+*** Keywords ***
+All Pods In Namespace Are Running Or Succeeded
+    [Arguments]    ${namespace}
+    ${pods}=    Get Resources    kind=Pod    namespace=${namespace}
+
+    FOR    ${pod}    IN    @{pods}
+        ${status}=    Set Variable    ${pod["status"]["phase"]}
+        Should Contain Any    ${status}    Running    Succeeded
+        ...    msg=Pod ${pod["metadata"]["name"]} in namespace ${namespace} is in unexpected state: ${status}
+    END
+
+
+
 *** Keywords ***
 All Pods In Namespace Are Running Or Succeeded
     [Arguments]    ${namespace}
