@@ -1,4 +1,24 @@
 *** Settings ***
+Library    KubeLibrary
+
+*** Keywords ***
+All Pods In Namespace Are Running Or Succeeded
+    [Arguments]    ${namespace}
+    ${pods}=    Get Pods    namespace=${namespace}
+    FOR    ${pod}    IN    @{pods}
+        ${status}=    Get Pod Status    ${pod}    ${namespace}
+        Should Contain Any    ${status}    Running    Succeeded
+        ...    msg=Pod ${pod} in namespace ${namespace} is in unexpected state: ${status}
+    END
+
+Check All Pods In All Namespaces
+    ${namespaces}=    Get Namespaces
+    FOR    ${namespace}    IN    @{namespaces}
+        Log    Checking namespace: ${namespace}
+        All Pods In Namespace Are Running Or Succeeded    ${namespace}
+    END
+
+*** Settings ***
 Library    KubeLibrary    kube_config=/root/.kube/config  # Update your kubeconfig path
 
 *** Test Cases ***
