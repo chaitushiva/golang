@@ -1,0 +1,33 @@
+*** Settings ***
+Library    KubeLibrary    kube_config=/root/.kube/config  # Update your kubeconfig path
+
+*** Test Cases ***
+List All Namespaces and Pod Statuses
+    [Documentation]    List all namespaces and check all pods in each namespace
+    ${namespaces}    List Namespaces
+    FOR    ${namespace}    IN    @{namespaces}
+        Log    Checking namespace: ${namespace}
+        ${pods}    List Pods In Namespace    ${namespace}
+        FOR    ${pod}    IN    @{pods}
+            ${status}    Get Pod Status    ${pod}    ${namespace}
+            Log    Pod: ${pod} | Status: ${status}
+        END
+    END
+
+*** Keywords ***
+List Namespaces
+    [Documentation]    Returns a list of all namespaces in the cluster
+    ${namespaces}    Get Namespaces
+    RETURN    ${namespaces}
+
+List Pods In Namespace
+    [Arguments]    ${namespace}
+    [Documentation]    Returns a list of all pods in a specific namespace
+    ${pods}    Get Pods In Namespace    ${namespace}
+    RETURN    ${pods}
+
+Get Pod Status
+    [Arguments]    ${pod}    ${namespace}
+    [Documentation]    Returns the status of a given pod
+    ${status}    Get Pod Status    ${pod}    ${namespace}
+    RETURN    ${status}
