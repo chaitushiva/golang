@@ -1,72 +1,30 @@
-from flask import Flask, request, jsonify, send_file
-from flasgger import Swagger
+from flask import Flask, jsonify, send_file
 import subprocess
 import os
 
 app = Flask(__name__)
-swagger = Swagger(app)
-
 RESULTS_DIR = "results"
+TEST_FILE = "test_suite.robot"
 
 @app.route('/run-tests', methods=['POST'])
 def run_tests():
-    """
-    Run Robot Framework tests
-    ---
-    tags:
-      - Tests
-    responses:
-      200:
-        description: Tests executed successfully
-    """
+    """Run Robot Framework tests"""
+    if not os.path.exists(RESULTS_DIR):
+        os.makedirs(RESULTS_DIR)
+
     try:
-        subprocess.run(["robot", "--outputdir", RESULTS_DIR, "tests/test_suite.robot"], check=True)
+        subprocess.run(["robot", "--outputdir", RESULTS_DIR, TEST_FILE], check=True)
         return jsonify({"message": "Tests executed successfully", "status": "success"}), 200
     except subprocess.CalledProcessError:
         return jsonify({"message": "Test execution failed", "status": "error"}), 500
 
 @app.route('/get-result', methods=['GET'])
 def get_result():
-    """
-    Get test report
-    ---
-    tags:
-      - Results
-    responses:
-      200:
-        description: Returns result.html
-    """
+    """Return result.html"""
     result_file = os.path.join(RESULTS_DIR, "report.html")
     if os.path.exists(result_file):
-        return send_file(result_file, as_attachment=True)
+        return send_file(result_file)
     return jsonify({"message": "Result file not found", "status": "error"}), 404
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-swagger: "2.0"
-info:
-  title: "Robot Framework Test Runner API"
-  description: "API to trigger and fetch Robot Framework test results"
-  version: "1.0.0"
-host: "localhost:5000"
-schemes:
-  - "http"
-paths:
-  /run-tests:
-    post:
-      summary: "Run tests"
-      tags:
-        - "Tests"
-      responses:
-        "200":
-          description: "Tests executed successfully"
-  /get-result:
-    get:
-      summary: "Get test report"
-      tags:
-        - "Results"
-      responses:
-        "200":
-          description: "Returns result.html"
-
