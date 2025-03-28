@@ -1,111 +1,72 @@
-*** Settings ***
-Library    KubeLibrary
+from flask import Flask, request, jsonify, send_file
+from flasgger import Swagger
+import subprocess
+import os
 
-*** Test Cases ***
-Verify All Pods In All Namespaces Are Running Or Succeeded
-    ${namespaces}=    Get Resources    kind=Namespace
-    FOR    ${namespace}    IN    @{namespaces}
-        ${namespace_name}=    Set Variable    ${namespace["metadata"]["name"]}
-        Log    Checking namespace: ${namespace_name}
-        All Pods In Namespace Are Running Or Succeeded    ${namespace_name}
-    END
+app = Flask(__name__)
+swagger = Swagger(app)
 
-*** Keywords ***
-All Pods In Namespace Are Running Or Succeeded
-    [Arguments]    ${namespace}
-    ${pods}=    Get Resources    kind=Pod    namespace=${namespace}
+RESULTS_DIR = "results"
 
-    FOR    ${pod}    IN    @{pods}
-        ${status}=    Set Variable    ${pod["status"]["phase"]}
-        Should Contain Any    ${status}    Running    Succeeded
-        ...    msg=Pod ${pod["metadata"]["name"]} in namespace ${namespace} is in unexpected state: ${status}
-    END
+@app.route('/run-tests', methods=['POST'])
+def run_tests():
+    """
+    Run Robot Framework tests
+    ---
+    tags:
+      - Tests
+    responses:
+      200:
+        description: Tests executed successfully
+    """
+    try:
+        subprocess.run(["robot", "--outputdir", RESULTS_DIR, "tests/test_suite.robot"], check=True)
+        return jsonify({"message": "Tests executed successfully", "status": "success"}), 200
+    except subprocess.CalledProcessError:
+        return jsonify({"message": "Test execution failed", "status": "error"}), 500
 
+@app.route('/get-result', methods=['GET'])
+def get_result():
+    """
+    Get test report
+    ---
+    tags:
+      - Results
+    responses:
+      200:
+        description: Returns result.html
+    """
+    result_file = os.path.join(RESULTS_DIR, "report.html")
+    if os.path.exists(result_file):
+        return send_file(result_file, as_attachment=True)
+    return jsonify({"message": "Result file not found", "status": "error"}), 404
 
+if __name__ == '__main__':
+    app.run(debug=True)
 
-*** Keywords ***
-All Pods In Namespace Are Running Or Succeeded
-    [Arguments]    ${namespace}
-    ${pods}=    Run Process    kubectl get pods -n ${namespace} --no-headers -o custom-columns=":status.phase"
-    Log    ${pods.stdout}
-
-    ${pod_statuses}=    Split String    ${pods.stdout}    \n
-    FOR    ${status}    IN    @{pod_statuses}
-        Should Contain Any    ${status}    Running    Succeeded
-        ...    msg=Found pod in ${namespace} with unexpected status: ${status}
-    END
-
-
-
-*** Settings ***
-Library    KubeLibrary
-
-*** Keywords ***
-All Pods In Namespace Are Running Or Succeeded
-    [Arguments]    ${namespace}
-    ${pods}=    Get Pods    namespace=${namespace}
-    FOR    ${pod}    IN    @{pods}
-        ${status}=    Get Pod Status    ${pod}    ${namespace}
-        Should Contain Any    ${status}    Running    Succeeded
-        ...    msg=Pod ${pod} in namespace ${namespace} is in unexpected state: ${status}
-    END
-
-Check All Pods In All Namespaces
-    ${namespaces}=    Get Namespaces
-    FOR    ${namespace}    IN    @{namespaces}
-        Log    Checking namespace: ${namespace}
-        All Pods In Namespace Are Running Or Succeeded    ${namespace}
-    END
-
-*** Settings ***
-Library    KubeLibrary    kube_config=/root/.kube/config  # Update your kubeconfig path
-
-*** Test Cases ***
-List All Namespaces and Pod Statuses
-    [Documentation]    List all namespaces and check all pods in each namespace
-    ${namespaces}    List Namespaces
-    FOR    ${namespace}    IN    @{namespaces}
-        Log    Checking namespace: ${namespace}
-        ${pods}    List Pods In Namespace    ${namespace}
-        FOR    ${pod}    IN    @{pods}
-            ${status}    Get Pod Status    ${pod}    ${namespace}
-            Log    Pod: ${pod} | Status: ${status}
-        END
-    END
-
-*** Keywords ***
-List Namespaces
-    [Documentation]    Returns a list of all namespaces in the cluster
-    ${namespaces}    Get Namespaces
-    RETURN    ${namespaces}
-
-List Pods In Namespace
-    [Arguments]    ${namespace}
-    [Documentation]    Returns a list of all pods in a specific namespace
-    ${pods}    Get Pods In Namespace    ${namespace}
-    RETURN    ${pods}
-
-Get Pod Status
-    [Arguments]    ${pod}    ${namespace}
-    [Documentation]    Returns the status of a given pod
-    ${status}    Get Pod Status    ${pod}    ${namespace}
-    RETURN    ${status}
-
-
-*** Settings ***
-Library    KubeLibrary
-
-*** Test Cases ***
-Check All Pods Running
-    [Documentation]    Verify all pods in all namespaces are in Running state
-    ${pods}    List Pods    all-namespaces=True
-    ${failures}    Set Variable    0
-    
-    FOR    ${pod}    IN    @{pods}
-        ${status}    Get From Dictionary    ${pod}    status.phase
-        Run Keyword If    '${status}' != 'Running'    Set Variable    ${failures}    ${failures + 1}
-    END
-
-    Should Be Equal As Integers    ${failures}    0    All pods should be in Running state
-
+swagger: "2.0"
+info:
+  title: "Robot Framework Test Runner API"
+  description: "API to trigger and fetch Robot Framework test results"
+  version: "1.0.0"
+host: "localhost:5000"
+schemes:
+  - "http"
+paths:
+  /run-tests:
+    post:
+      summary: "Run tests"
+      tags:
+        - "Tests"
+      responses:
+        "200":
+          description: "Tests executed successfully"
+  /get-result:
+    get:
+      summary: "Get test report"
+      tags:
+        - "Results"
+      responses:
+        "200":
+          description: "Returns result.html"
 
