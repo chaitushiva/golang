@@ -1,30 +1,49 @@
-from flask import Flask, jsonify, send_file
-import subprocess
 import os
+import subprocess
+from flask import Flask, jsonify
+from flasgger import Swagger
 
 app = Flask(__name__)
+swagger = Swagger(app)
+
 RESULTS_DIR = "results"
-TEST_FILE = "test_suite.robot"
+TEST_SUITE = "test_suite.robot"
 
 @app.route('/run-tests', methods=['POST'])
-def run_tests():
-    """Run Robot Framework tests"""
+def run_robot_tests():
+    """
+    Execute Robot Framework Tests
+    ---
+    tags:
+      - Robot Framework
+    responses:
+      200:
+        description: Test execution completed
+      500:
+        description: Test execution failed
+    """
     if not os.path.exists(RESULTS_DIR):
         os.makedirs(RESULTS_DIR)
 
-    try:
-        subprocess.run(["robot", "--outputdir", RESULTS_DIR, TEST_FILE], check=True)
-        return jsonify({"message": "Tests executed successfully", "status": "success"}), 200
-    except subprocess.CalledProcessError:
-        return jsonify({"message": "Test execution failed", "status": "error"}), 500
+    result = subprocess.run(["robot", "--outputdir", RESULTS_DIR, TEST_SUITE], capture_output=True, text=True)
 
-@app.route('/get-result', methods=['GET'])
-def get_result():
-    """Return result.html"""
-    result_file = os.path.join(RESULTS_DIR, "report.html")
-    if os.path.exists(result_file):
-        return send_file(result_file)
-    return jsonify({"message": "Result file not found", "status": "error"}), 404
+    return jsonify({
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "report_url": f"http://localhost:8080/results/report.html"
+    }), 200 if result.returncode == 0 else 500
+
+@app.route('/results/<filename>', methods=['GET'])
+def get_result_file(filename):
+    """Serve Robot Framework result files"""
+    return open(os.path.join(RESULTS_DIR, filename)).read()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=8080)
+
+
+Flask
+flasgger
+robotframework
+
+
