@@ -41,16 +41,15 @@ kind: Ingress
 metadata:
   name: game-2048
   annotations:
-    kubernetes.io/ingress.class: "nginx"  # change if you're using another class
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    external-dns.alpha.kubernetes.io/hostname: "2048.example.com"
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    external-dns.alpha.kubernetes.io/hostname: game.example.com
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
-  tls:
-    - hosts:
-        - 2048.example.com
-      secretName: game-2048-tls
   rules:
-    - host: 2048.example.com
+    - host: game.example.com
       http:
         paths:
           - path: /
@@ -60,3 +59,7 @@ spec:
                 name: game-2048
                 port:
                   number: 80
+  tls:
+    - hosts:
+        - game.example.com
+      secretName: game-2048-tls
