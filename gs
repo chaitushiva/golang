@@ -1,3 +1,39 @@
+controller:
+  ingressClassResource:
+    name: nginx
+    enabled: true
+    default: false
+    controllerValue: "k8s.io/ingress-nginx"
+
+  ingressClass: nginx
+
+  kind: Deployment  # Explicitly use Deployment
+
+  replicaCount: 2   # Scale to at least 2 for HA across AZs
+
+  service:
+    enabled: true
+    type: NodePort
+    nodePorts:
+      http: 30080    # Port used by NLB to forward HTTP (if needed)
+      https: 30443   # Port used by NLB to forward HTTPS (TLS terminated at NLB)
+    targetPorts:
+      http: http
+      https: https
+
+  # Optional: Allow using internal IPs as X-Forwarded-For
+  config:
+    use-forwarded-headers: "true"
+
+  # Optional: Enable readiness probes using the default ports
+  healthCheckPath: /healthz
+  healthCheckPort: 10254
+
+defaultBackend:
+  enabled: true
+
+---
+
 apiVersion: v1
 kind: Service
 metadata:
