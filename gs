@@ -1,3 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-nlb
+  namespace: ingress-nginx
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:<region>:<account-id>:certificate/<cert-id>
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+    external-dns.alpha.kubernetes.io/hostname: 2048.internal.example.com.
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+  ports:
+    - name: https
+      port: 443
+      targetPort: 30443
+
+
+
 ---
 apiVersion: apps/v1
 kind: Deployment
